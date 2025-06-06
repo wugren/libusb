@@ -1677,7 +1677,7 @@ static int winusb_get_device_list(struct libusb_context *ctx, struct discovered_
 	if (unref_list == NULL) {
 		usbi_err(ctx, "failed to alloc unref list");
 		free((void *)guid_list);
-		return LIBUSB_ERROR_NO_MEM;
+		return LIBUSB_ERROR_NO_MEM; 
 	}
 
 	dev_info_intf = pSetupDiGetClassDevsA(NULL, NULL, NULL, DIGCF_ALLCLASSES | DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
@@ -1928,6 +1928,10 @@ static int winusb_get_device_list(struct libusb_context *ctx, struct discovered_
 				priv->sub_api = sub_api;
 				switch (api) {
 				case USB_API_COMPOSITE:
+					if (sub_api == 2) {
+						for (j = 0; j < USB_MAXINTERFACES; j++)
+							priv->usb_interface[j].apib = &usb_api_backend[USB_API_HID];
+					}
 					break;
 				case USB_API_HUB:
 					parent_dev = get_ancestor(ctx, dev_info_data.DevInst, NULL);
@@ -2319,7 +2323,8 @@ const struct windows_backend winusb_backend = {
 
 static const char * const composite_driver_names[] = {
   "USBCCGP", // (Windows built-in) USB Composite Device
-  "dg_ssudbus" // SAMSUNG Mobile USB Composite Device
+  "dg_ssudbus", // SAMSUNG Mobile USB Composite Device
+  "usbprint"
 };
 static const char * const winusbx_driver_names[] = {"libusbK", "libusb0", "WinUSB"};
 static const char * const hid_driver_names[] = {"HIDUSB", "MOUHID", "KBDHID"};
