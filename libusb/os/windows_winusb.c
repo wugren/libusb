@@ -4033,13 +4033,15 @@ static int hid_open(int sub_api, struct libusb_device_handle *dev_handle)
 
 	hid_attributes.Size = sizeof(hid_attributes);
 	do {
-		if (!HidD_GetAttributes(hid_handle, &hid_attributes)) {
-			usbi_err(HANDLE_CTX(dev_handle), "could not gain access to HID top collection (HidD_GetAttributes)");
-			break;
+		if (priv->apib->id != USB_API_COMPOSITE && priv->sub_api != 2) {
+			if (!HidD_GetAttributes(hid_handle, &hid_attributes)) {
+				usbi_err(HANDLE_CTX(dev_handle), "could not gain access to HID top collection (HidD_GetAttributes)");
+				break;
+			}
+			priv->hid->vid = hid_attributes.VendorID;
+			priv->hid->pid = hid_attributes.ProductID;
 		}
 
-		priv->hid->vid = hid_attributes.VendorID;
-		priv->hid->pid = hid_attributes.ProductID;
 
 		// Set the maximum available input buffer size
 		for (i = 32; HidD_SetNumInputBuffers(hid_handle, i); i *= 2);
@@ -4087,6 +4089,9 @@ static int hid_open(int sub_api, struct libusb_device_handle *dev_handle)
 				}
 				free(value_caps);
 			}
+		}
+		if (priv->apib->id == USB_API_COMPOSITE && priv->sub_api == 2) {
+			priv->hid->uses_report_ids[1] = true;
 		}
 
 		// Set the report sizes
@@ -4431,6 +4436,7 @@ static enum libusb_transfer_status hid_copy_transfer_data(int sub_api, struct us
 {
 	struct libusb_transfer *transfer = USBI_TRANSFER_TO_LIBUSB_TRANSFER(itransfer);
 	struct winusb_transfer_priv *transfer_priv = get_winusb_transfer_priv(itransfer);
+	struct winusb_device_priv* priv = usbi_get_device_priv(transfer->dev_handle->dev);
 	enum libusb_transfer_status r = LIBUSB_TRANSFER_COMPLETED;
 
 	UNUSED(sub_api);
@@ -4446,7 +4452,7 @@ static enum libusb_transfer_status hid_copy_transfer_data(int sub_api, struct us
 					r = LIBUSB_TRANSFER_OVERFLOW;
 				}
 
-				if (transfer_priv->hid_buffer[0] == 0) {
+				if (!priv->hid->uses_report_ids[0] && transfer_priv->hid_buffer[0] == 0) {
 					memcpy(transfer_priv->hid_dest, transfer_priv->hid_buffer + 1, length);
 				} else {
 					memcpy(transfer_priv->hid_dest, transfer_priv->hid_buffer, length);
