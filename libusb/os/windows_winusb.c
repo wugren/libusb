@@ -1929,8 +1929,14 @@ static int winusb_get_device_list(struct libusb_context *ctx, struct discovered_
 				switch (api) {
 				case USB_API_COMPOSITE:
 					if (sub_api == 2) {
-						for (j = 0; j < USB_MAXINTERFACES; j++)
+						for (j = 0; j < USB_MAXINTERFACES; j++) {
+							priv->usb_interface[j].path = _strdup(priv->path);
 							priv->usb_interface[j].apib = &usb_api_backend[USB_API_HID];
+						}
+
+						priv->hid = calloc(1, sizeof(struct hid_device_priv));
+						if (priv->hid == NULL)
+							LOOP_BREAK(LIBUSB_ERROR_NO_MEM);
 					}
 					break;
 				case USB_API_HUB:
