@@ -1929,8 +1929,8 @@ static int winusb_get_device_list(struct libusb_context *ctx, struct discovered_
 				switch (api) {
 				case USB_API_COMPOSITE:
 					if (sub_api == 2) {
+						priv->usb_interface[0].path = _strdup(priv->path);
 						for (j = 0; j < USB_MAXINTERFACES; j++) {
-							priv->usb_interface[j].path = _strdup(priv->path);
 							priv->usb_interface[j].apib = &usb_api_backend[USB_API_HID];
 						}
 
@@ -4033,7 +4033,7 @@ static int hid_open(int sub_api, struct libusb_device_handle *dev_handle)
 
 	hid_attributes.Size = sizeof(hid_attributes);
 	do {
-		if (priv->apib->id != USB_API_COMPOSITE && priv->sub_api != 2) {
+		if (priv->apib->id != USB_API_COMPOSITE || priv->sub_api != 2) {
 			if (!HidD_GetAttributes(hid_handle, &hid_attributes)) {
 				usbi_err(HANDLE_CTX(dev_handle), "could not gain access to HID top collection (HidD_GetAttributes)");
 				break;
@@ -4047,9 +4047,15 @@ static int hid_open(int sub_api, struct libusb_device_handle *dev_handle)
 		for (i = 32; HidD_SetNumInputBuffers(hid_handle, i); i *= 2);
 		usbi_dbg(HANDLE_CTX(dev_handle), "set maximum input buffer size to %d", i / 2);
 
+		if (priv->apib->id == USB_API_COMPOSITE && priv->sub_api == 2) {
+			priv->hid->uses_report_ids[0] = false;
+			priv->hid->uses_report_ids[1] = false;
+		}
+
 		// Get the maximum input and output report size
 		if (!HidD_GetPreparsedData(hid_handle, &preparsed_data) || !preparsed_data) {
-			usbi_err(HANDLE_CTX(dev_handle), "could not read HID preparsed data (HidD_GetPreparsedData)");
+			int e = GetLastError();
+			usbi_err(HANDLE_CTX(dev_handle), "could not read HID preparsed data (HidD_GetPreparsedData) err:%d", e);
 			break;
 		}
 		if (HidP_GetCaps(preparsed_data, &capabilities) != HIDP_STATUS_SUCCESS) {
