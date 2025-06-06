@@ -4048,8 +4048,8 @@ static int hid_open(int sub_api, struct libusb_device_handle *dev_handle)
 		usbi_dbg(HANDLE_CTX(dev_handle), "set maximum input buffer size to %d", i / 2);
 
 		if (priv->apib->id == USB_API_COMPOSITE && priv->sub_api == 2) {
-			priv->hid->uses_report_ids[0] = false;
-			priv->hid->uses_report_ids[1] = false;
+			priv->hid->uses_report_ids[0] = true;
+			priv->hid->uses_report_ids[1] = true;
 		}
 
 		// Get the maximum input and output report size
